@@ -189,6 +189,30 @@ describe('assertTradingRegion', () => {
 
     await expect(assertTradingRegion()).resolves.toMatchObject({ ok: true });
   });
+
+  it('reports the failure without throwing when enforce is false', async () => {
+    stubFetch({
+      'ipwho.is': { body: IN },
+      'ipapi.co': { body: { ip: IN.ip, country_name: 'India', country_code: 'IN' } },
+      'clob.polymarket.com': { status: 200 },
+    });
+
+    // A dry run places no orders, so a restricted exit is reported, not fatal.
+    const result = await assertTradingRegion({ enforce: false });
+    expect(result.ok).toBe(false);
+    expect(result.blocked).toBe(true);
+    expect(result.problems.join(' ')).toMatch(/India \(IN\)/);
+  });
+
+  it('still throws for a live run even when a dry run would pass', async () => {
+    stubFetch({
+      'ipwho.is': { body: IN },
+      'ipapi.co': { body: { ip: IN.ip, country_name: 'India', country_code: 'IN' } },
+      'clob.polymarket.com': { status: 200 },
+    });
+
+    await expect(assertTradingRegion({ enforce: true })).rejects.toThrow(/refusing to trade/);
+  });
 });
 
 describe('formatGeoResult', () => {

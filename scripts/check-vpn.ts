@@ -110,7 +110,12 @@ async function main(): Promise<void> {
   console.log('─'.repeat(60));
   if (geo.blocked) {
     console.log('  • Your traffic is exiting from a country Polymarket restricts.');
-    console.log('    Connect your VPN/proxy to a permitted exit and re-run this check.');
+    console.log('    Live trading (DRY_RUN=false) will refuse to start. Note that');
+    console.log('    tunnelling around the restriction breaches Polymarket\'s Terms');
+    console.log('    of Service and risks a locked account — see docs/VPN_SETUP.md.');
+    console.log('  • A dry run (DRY_RUN=true, the default) is unaffected and still');
+    console.log('    starts: it reads market data and simulates fills without');
+    console.log('    placing orders. Use it for strategy work and backtesting.');
   }
   if (geo.inconsistent) {
     console.log('  • Two lookups disagreed on your exit IP — the tunnel is leaking.');

@@ -1027,9 +1027,15 @@ async function main() {
 
   // Geo preflight. A VPN that is down or exiting from a restricted country
   // means every order is rejected — better to fail here than to discover it
-  // while holding a position. Throws unless SKIP_GEO_CHECK=true.
-  const geo = await assertTradingRegion();
+  // while holding a position. Live runs abort; a dry run places no orders, so
+  // it only warns and carries on.
+  const geo = await assertTradingRegion({ enforce: !CONFIG.dryRun });
   log('INFO', `Geo preflight: ${formatGeoResult(geo)}`);
+  if (!geo.ok) {
+    log('WARN', 'Geo preflight failed — dry run only, live trading is not possible from here', {
+      problems: geo.problems,
+    });
+  }
 
   // Keep checking while the bot runs, so a tunnel that drops mid-session
   // surfaces immediately rather than as a wall of rejected orders.

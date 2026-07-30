@@ -285,12 +285,21 @@ export async function checkGeo(options: GeoCheckOptions = {}): Promise<GeoCheckR
  * Preflight that throws when it is not safe to trade. Call this from any entry
  * point that can place an order.
  *
- * Set `SKIP_GEO_CHECK=true` to bypass (useful in CI and for dry runs).
+ * Pass `enforce: false` for a run that cannot place an order — a dry run, a
+ * backtest, a market-data script. The check still runs and the result is still
+ * returned, so the caller can log it, but a restricted exit country is not a
+ * reason to refuse to start when no capital is at risk. Live runs must leave
+ * `enforce` at its default.
+ *
+ * Set `SKIP_GEO_CHECK=true` to bypass entirely (CI).
  */
-export async function assertTradingRegion(options: GeoCheckOptions = {}): Promise<GeoCheckResult> {
+export async function assertTradingRegion(
+  options: GeoCheckOptions & { enforce?: boolean } = {}
+): Promise<GeoCheckResult> {
   const result = await checkGeo(options);
+  const enforce = options.enforce ?? true;
 
-  if (process.env.SKIP_GEO_CHECK === 'true') {
+  if (!enforce || process.env.SKIP_GEO_CHECK === 'true') {
     return result;
   }
 
