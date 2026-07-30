@@ -102,7 +102,7 @@ This is a **software tool** that automatically:
 #### Computer & Software
 
 - **Any computer** (Windows, Mac, Linux)
-- **Node.js installed** (version 18 or higher)
+- **Node.js installed** (version 20.10 or higher)
   - Download from: https://nodejs.org/
   - Or use: `nvm` (Node Version Manager) for Mac/Linux
 - **Git installed** (optional but recommended)
@@ -1092,7 +1092,7 @@ error TS2307: Cannot find module '...'
 
 **Solution**:
 1. Make sure you ran `npm install`
-2. Check Node.js version is 18+
+2. Check Node.js version is 20.10+
 3. Try deleting `node_modules` and reinstalling
 4. Verify all source files are present
 

@@ -12,7 +12,7 @@
 
 This document outlines the E2E test plan for poly-sdk's new architecture, which uses:
 
-1. **TradingService** - Wraps official `@polymarket/clob-client` for trading and market data
+1. **TradingService** - Wraps official `@polymarket/clob-client-v2` for trading and market data
 2. **RealtimeServiceV2** - Uses official `@polymarket/real-time-data-client` for WebSocket data
 3. **ArbitrageService** - Real-time arbitrage detection using RealtimeServiceV2
 4. **RealtimeService** (legacy) - Backward-compatible wrapper around V2
@@ -47,7 +47,7 @@ pnpm tsx examples/07-realtime-websocket.ts
 
 **File**: `src/__tests__/integration/trading-service.integration.test.ts`
 
-TradingService wraps the official `@polymarket/clob-client` and provides:
+TradingService wraps the official `@polymarket/clob-client-v2` and provides:
 - Market data fetching
 - Orderbook access
 - Price history

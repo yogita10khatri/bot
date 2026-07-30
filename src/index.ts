@@ -8,6 +8,13 @@
  * - Services (WalletService, MarketService)
  */
 
+// Side-effecting, and deliberately the first import in the file: loads `.env`
+// and installs the proxy transport (when PROXY_URL is set) before any module
+// below can construct an HTTP client, an ethers provider or a WebSocket.
+// Without a proxy configured this is a no-op, so hosts on a full-tunnel VPN are
+// unaffected. See src/core/proxy.ts and docs/VPN_SETUP.md.
+import './bootstrap.js';
+
 // Core infrastructure
 export { RateLimiter, ApiType } from './core/rate-limiter.js';
 export { Cache, CACHE_TTL } from './core/cache.js';
@@ -17,6 +24,29 @@ export * from './core/types.js';
 // Cache integration (new)
 export type { UnifiedCache } from './core/unified-cache.js';
 export { createUnifiedCache } from './core/unified-cache.js';
+
+// Proxy / VPN transport — required to reach Polymarket from a restricted
+// region. See docs/VPN_SETUP.md.
+export {
+  installProxy,
+  getInstalledProxy,
+  getProxyUrlFromEnv,
+  redact as redactProxyUrl,
+} from './core/proxy.js';
+export type { ProxyInfo, ProxyKind, InstallProxyOptions } from './core/proxy.js';
+
+// Geo preflight — verifies the exit IP before any capital is risked.
+export {
+  checkGeo,
+  assertTradingRegion,
+  getExitIp,
+  isClobReachable,
+  formatGeoResult,
+  startGeoWatchdog,
+  describeFetchError,
+  DEFAULT_BLOCKED_COUNTRIES,
+} from './core/geo.js';
+export type { GeoCheckResult, GeoCheckOptions, ExitIp } from './core/geo.js';
 
 // API Clients
 export { DataApiClient } from './clients/data-api.js';

@@ -1,0 +1,84 @@
+# Runs the bot inside gluetun's network namespace.
+#
+# The bot container has `network_mode: service:vpn`, which means it has no
+# network stack of its own and no route to the internet except through the VPN.
+# There is no fallback path, so a dropped tunnel produces connection errors
+# rather than a silent leak to your real IP — the strongest of the three setups
+# in docs/VPN_SETUP.md.
+#
+#   docker compose -f docker-compose.vpn.yml up -d
+#   docker compose -f docker-compose.vpn.yml logs -f bot
+#
+# Read docs/VPN_SETUP.md before enabling live trading.
+
+services:
+  vpn:
+    image: qmcgaw/gluetun:latest
+    container_name: polymarket-vpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      # ---- Provider ----------------------------------------------------
+      # See https://github.com/qdm12/gluetun-wiki for the variables each
+      # provider needs. Example below is WireGuard with a generic provider.
+      VPN_SERVICE_PROVIDER: ${VPN_SERVICE_PROVIDER:-custom}
+      VPN_TYPE: ${VPN_TYPE:-wireguard}
+
+      # WireGuard (VPN_TYPE=wireguard)
+      WIREGUARD_PRIVATE_KEY: ${WIREGUARD_PRIVATE_KEY:-}
+      WIREGUARD_ADDRESSES: ${WIREGUARD_ADDRESSES:-}
+      WIREGUARD_PUBLIC_KEY: ${WIREGUARD_PUBLIC_KEY:-}
+      WIREGUARD_ENDPOINT_IP: ${WIREGUARD_ENDPOINT_IP:-}
+      WIREGUARD_ENDPOINT_PORT: ${WIREGUARD_ENDPOINT_PORT:-51820}
+
+      # OpenVPN (VPN_TYPE=openvpn)
+      OPENVPN_USER: ${OPENVPN_USER:-}
+      OPENVPN_PASSWORD: ${OPENVPN_PASSWORD:-}
+
+      # ---- Exit location -----------------------------------------------
+      # Pick a country Polymarket does not restrict.
+      SERVER_COUNTRIES: ${VPN_SERVER_COUNTRIES:-Netherlands}
+
+      # ---- Leak protection ---------------------------------------------
+      # Only these subnets bypass the tunnel, so the dashboard stays reachable
+      # from your LAN while everything else is forced through the VPN.
+      FIREWALL_OUTBOUND_SUBNETS: ${LAN_SUBNETS:-192.168.0.0/16,10.0.0.0/8,172.16.0.0/12}
+      DOT: "on" # DNS over TLS, so DNS cannot leak outside the tunnel
+
+      TZ: ${TZ:-Asia/Kolkata}
+    ports:
+      # Published here rather than on the bot service, which has no network
+      # namespace of its own. Only useful with the dashboard entry point (see
+      # the commented `command` below); harmless otherwise.
+      - "3001:3001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/gluetun-entrypoint", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: polymarket-bot
+    # No network of its own — everything goes through the vpn container.
+    network_mode: service:vpn
+    depends_on:
+      vpn:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # gluetun already forces every packet through the tunnel, so the
+      # per-process proxy is not needed and would double-tunnel.
+      PROXY_URL: ""
+      REQUIRE_PROXY: "false"
+    restart: unless-stopped
+    # Default is the plain bot (bot-config.ts). To serve the dashboard on the
+    # port published above, build dashboard/ into dashboard/dist first, then:
+    # command: ["npx", "tsx", "bot-with-dashboard.ts"]

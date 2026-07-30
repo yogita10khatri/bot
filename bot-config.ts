@@ -24,12 +24,18 @@
  * Run with: npx tsx bot-config.ts
  */
 
-import 'dotenv/config';
+// Loads .env and installs the proxy transport. Must be the first import so the
+// tunnel is in place before any HTTP client, RPC provider or WebSocket is
+// created. See docs/VPN_SETUP.md.
+import './src/bootstrap.js';
 import {
   PolymarketSDK,
   ArbitrageService,
   OnchainService,
   BridgeClient,
+  assertTradingRegion,
+  formatGeoResult,
+  startGeoWatchdog,
   type SmartMoneyTrade,
   type SmartMoneyLeaderboardEntry,
   type BinanceKLine,
@@ -877,6 +883,20 @@ async function main() {
     log('ERROR', 'POLYMARKET_PRIVATE_KEY not found');
     process.exit(1);
   }
+
+  // Geo preflight. A VPN that is down or exiting from a restricted country
+  // means every order is rejected — better to fail here than to discover it
+  // while holding a position. Throws unless SKIP_GEO_CHECK=true.
+  const geo = await assertTradingRegion();
+  log('INFO', `Geo preflight: ${formatGeoResult(geo)}`);
+
+  // Keep checking while the bot runs, so a tunnel that drops mid-session
+  // surfaces immediately rather than as a wall of rejected orders.
+  startGeoWatchdog(result => {
+    log('ERROR', 'Geo check failed while running — the VPN/proxy may have dropped', {
+      problems: result.problems,
+    });
+  });
 
   log('INFO', 'Configuration', {
     capital: `$${CONFIG.capital.totalUsd}`,

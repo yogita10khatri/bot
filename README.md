@@ -7,6 +7,26 @@
 
 **Created by**: [@Mr_CryptoYT](https://x.com/Mr_CryptoYT)
 
+> This is a fork of [MrFadiAi/Polymarket-bot](https://github.com/MrFadiAi/Polymarket-bot),
+> migrated to Polymarket's CLOB client v2 and extended with VPN/proxy support for
+> restricted regions. All of the original strategy and risk work is upstream's.
+
+## 🆕 What's New in this fork
+
+### 🔌 **Migrated to CLOB Client v2**
+- ✅ Now uses [`@polymarket/clob-client-v2`](https://github.com/Polymarket/clob-client-v2) instead of the v1 client
+- ✅ Order signing verified against v2's EIP-712 domain — the existing ethers v5 wallet is used as the signer, so nothing else in the bot had to change
+- ✅ v2 returns API errors as objects rather than throwing; every call site now handles that instead of mistaking an error body for a success
+
+### 🌍 **VPN / proxy support for restricted regions**
+- ✅ One `PROXY_URL` routes **all four** of the bot's network transports (`https`, `axios`, `fetch`, WebSockets)
+- ✅ `npm run check:vpn` preflight: exit IP, exit country, leak cross-check, endpoint reachability
+- ✅ Startup geo check plus a watchdog that catches a VPN dropping mid-session
+- ✅ Docker + [gluetun](https://github.com/qdm12/gluetun) setup with no route to the internet outside the tunnel
+- 📖 **Read [`docs/VPN_SETUP.md`](docs/VPN_SETUP.md) before you trade** — it covers the account risk, not just the wiring
+
+---
+
 ## 🆕 What's New in v3.1 (January 2026)
 
 ### 🔴 **Professional-Grade Risk Management**
@@ -30,12 +50,13 @@ This guide will take you **from A to Z** on how to set up, configure, and run yo
 1. [Prerequisites](#prerequisites)
 2. [Installation](#installation)
 3. [Configuration](#configuration)
-4. [Running the Bot](#running-the-bot)
-5. [Dashboard Guide](#dashboard-guide)
-6. [Risk Management](#risk-management)
-7. [Strategies Explained](#strategies-explained)
-8. [Troubleshooting](#troubleshooting)
-9. [Safety & Risks](#safety--risks)
+4. [VPN / Restricted Regions](#4-vpn--restricted-regions)
+5. [Running the Bot](#running-the-bot)
+6. [Dashboard Guide](#dashboard-guide)
+7. [Risk Management](#risk-management)
+8. [Strategies Explained](#strategies-explained)
+9. [Troubleshooting](#troubleshooting)
+10. [Safety & Risks](#safety--risks)
 
 ---
 
@@ -45,8 +66,9 @@ Before you start, you need three things:
 
 ### 💻 Computer Requirements
 - **OS**: Windows, Mac, or Linux.
-- **Node.js**: You must have Node.js installed (Version 18 or higher).
+- **Node.js**: You must have Node.js installed (**Version 20.10 or higher** — required by Polymarket's CLOB client v2).
   - [Download Node.js here](https://nodejs.org/) (Choose "LTS" version).
+  - Check yours with `node --version`.
 - **Git**: Required to download the code.
   - [Download Git here](https://git-scm.com/).
 
@@ -70,8 +92,8 @@ Open your terminal (Command Prompt or PowerShell on Windows, Terminal on Mac) an
 Download the bot code to your computer.
 
 ```bash
-git clone https://github.com/MrFadiAi/Polymarket-bot.git
-cd Polymarket-bot
+git clone https://github.com/ProofOfNaina/bot.git
+cd bot
 ```
 
 *(Note: If you downloaded the ZIP file instead, just unzip it and open the folder in your terminal)*
@@ -137,6 +159,14 @@ TOTAL_MAX_LOSS_PCT=0.40      # 40% total loss = permanent halt
 # API Keys (Optional but recommended for speed)
 # Get a free key from specific providers if you want better performance
 # ALCHEMY_KEY=...
+
+# ==============================================
+# 🌍 VPN / PROXY (see section 4 and docs/VPN_SETUP.md)
+# ==============================================
+# Required if you are in a country Polymarket restricts, such as India.
+# Leave empty if the machine is already on a full-tunnel VPN.
+# PROXY_URL=socks5://username:password@proxy-host:1080
+# REQUIRE_PROXY=true
 ```
 
 **⚠️ IMPORTANT:** 
@@ -145,7 +175,59 @@ TOTAL_MAX_LOSS_PCT=0.40      # 40% total loss = permanent halt
 
 ---
 
-## 4. Running the Bot
+## 4. VPN / Restricted Regions
+
+**Skip this section only if you are in a country Polymarket serves.** If you are
+in India — or anywhere else on Polymarket's restricted list — read
+**[`docs/VPN_SETUP.md`](docs/VPN_SETUP.md)** in full before going any further.
+
+### The part that is not a technical problem
+
+Polymarket's Terms of Service restrict access from certain jurisdictions.
+Tunnelling around that is a breach of those terms. Accounts get closed for it,
+and a closed account can leave funds stuck in positions you can no longer
+manage. Your own local rules may also apply. This fork gives you the plumbing;
+the decision and the consequences are yours.
+
+If you go ahead: **small capital, and `DRY_RUN=true` until the preflight is
+consistently green.**
+
+### The technical part
+
+The bot uses four separate network transports, and tunnelling only one of them
+leaks the rest. A single setting routes all of them:
+
+```env
+# .env — per-process proxy (recommended: only the bot is tunnelled)
+PROXY_URL=socks5://username:password@proxy-host:1080
+REQUIRE_PROXY=true
+```
+
+Or leave `PROXY_URL` empty and run a full-tunnel VPN on the machine, with its
+kill switch turned on.
+
+### Always check before you trade
+
+```bash
+npm run check:vpn
+```
+
+This reports where your traffic actually exits, whether that exit is in a
+restricted country, whether two independent lookups agree (they disagree when
+the tunnel is leaking), and whether Polymarket's endpoints answer. It exits 0
+only when it is safe to trade, so you can chain it:
+
+```bash
+npm run check:vpn && npx tsx bot-with-dashboard.ts
+```
+
+The same check runs automatically at bot startup, and a watchdog re-runs it
+every five minutes so a VPN that drops mid-session is reported immediately
+rather than showing up as unexplained rejected orders.
+
+---
+
+## 5. Running the Bot
 
 Now the fun part! Let's start the bot with the visual dashboard.
 
@@ -164,7 +246,7 @@ If it doesn't open, just click that link.
 
 ---
 
-## 5. Dashboard Guide
+## 6. Dashboard Guide
 
 The dashboard is your command center with **enhanced risk monitoring**.
 
@@ -188,7 +270,7 @@ The dashboard is your command center with **enhanced risk monitoring**.
 
 ---
 
-## 6. Risk Management
+## 7. Risk Management
 
 ### 🆕 Multi-Layer Protection System
 
@@ -228,7 +310,7 @@ The bot now **adapts position sizes** based on performance:
 
 ---
 
-## 7. Strategies Explained
+## 8. Strategies Explained
 
 The bot comes with 4 powerful strategies. You can toggle them ON/OFF in the dashboard.
 
@@ -267,7 +349,7 @@ The bot comes with 4 powerful strategies. You can toggle them ON/OFF in the dash
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 **"Command not found" error?**
 - Make sure you installed Node.js. Restart your computer if you just installed it.
@@ -275,6 +357,19 @@ The bot comes with 4 powerful strategies. You can toggle them ON/OFF in the dash
 **"Connection Failed"?**
 - Check your internet.
 - Verify your `POLYMARKET_PRIVATE_KEY` is correct in `.env`.
+- On a VPN or proxy, run `npm run check:vpn` — it names the actual cause instead of a generic failure.
+
+**"Geo preflight failed — refusing to trade"?**
+- Your traffic is exiting from a country Polymarket restricts, or the tunnel is down.
+- Run `npm run check:vpn` for the detail, then see [`docs/VPN_SETUP.md`](docs/VPN_SETUP.md).
+
+**"Failed to create or derive API key"?**
+- Usually a geoblock rather than a wallet problem. Check `npm run check:vpn` first.
+- If the exit IP is fine, make sure the wallet has been used on Polymarket at least once.
+
+**Everything worked, then orders started getting rejected?**
+- Your VPN most likely dropped mid-session. The geo watchdog logs this every five minutes.
+- Turn on your VPN's kill switch, or use `PROXY_URL` + `REQUIRE_PROXY=true` so a dead tunnel errors instead of leaking.
 
 **"Insufficient Funds"?**
 - You need both USDC (for trades) and MATIC (for gas) on the **Polygon Network**.
@@ -288,7 +383,7 @@ The bot comes with 4 powerful strategies. You can toggle them ON/OFF in the dash
 
 ---
 
-## 9. Safety & Risks
+## 10. Safety & Risks
 
 ### ✅ Built-in Safety Features (v3.1)
 1. **Multi-Layer Limits**: 4 levels of automatic protection

@@ -132,7 +132,7 @@ poly-sdk Architecture
 │  └────────────┘ └────────────┘ └────────────┘ └────────────┘ └────────────┘ │
 │                                                                               │
 │  Uses Official Polymarket Clients:                                           │
-│  • @polymarket/clob-client - Trading, orderbook, market data                 │
+│  • @polymarket/clob-client-v2 - Trading, orderbook, market data              │
 │  • @polymarket/real-time-data-client - WebSocket real-time updates           │
 │                                                                               │
 ├──────────────────────────────────────────────────────────────────────────────┤
@@ -275,7 +275,7 @@ sdk.stop();  // Disconnect all services
 
 ### TradingService
 
-Order management using `@polymarket/clob-client`.
+Order management using `@polymarket/clob-client-v2`.
 
 ```typescript
 import { TradingService } from '@catalyst-team/poly-sdk';
@@ -932,7 +932,7 @@ import type {
 
 ## Dependencies
 
-- `@polymarket/clob-client` - Official CLOB trading client
+- `@polymarket/clob-client-v2` - Official CLOB trading client
 - `@polymarket/real-time-data-client` - Official WebSocket client
 - `ethers@5` - Blockchain interactions
 - `bottleneck` - Rate limiting
